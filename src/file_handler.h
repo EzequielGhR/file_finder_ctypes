@@ -30,5 +30,7 @@
 
     struct file_matches* find_by_name(const char* filename, const char* start_path,
                                       struct file_matches* fmatches);
-    struct file_matches* find_by_content(const char* data, const char* start_path);
+    struct file_matches* find_by_content(const char* data, const char* start_path,
+                                         struct file_matches* fmatches);
+
 #endif
