@@ -6,19 +6,26 @@
 #include "file_handler.h"
 
 
-// Forward declarations
+// <<< Forward declarations >>>
+char*                   case_strchr(char* s, char c);
 Bool                    concat_path(char* dest_path, char* to_concat);
-struct file_data*       allocate_new_file_data(char* file_path, char* filename, char* file_content_slice);
-struct file_matches*    allocate_or_return_file_matches(struct file_matches* fmatches);
-void                    free_pointer(void* ptr);
 Bool                    is_substring(char* src, char* sub_str, char* buffer, unsigned int buffer_size);
 Bool                    is_in_file_lines(char* filepath, char* sub_str, char* buffer, unsigned int buffer_size);
-char*                   case_strchr(char* s, char c);
+struct file_data*       allocate_new_file_data(char* file_path, char* filename, char* file_content_slice);
+void                    free_pointer(void* ptr);
 
 
-// Main logic
+// <<< Main logic >>>
+/**
+ @brief Find a file in start_path and child paths by filename
+ @param filename: A substring of the name of the file to find
+ @param start_path: The starting path for searching the file
+ @param fmatches: structure for holding file matches previously allocated
+ */
 struct file_matches* find_by_name(const char* filename, const char* start_path,
                                   struct file_matches* fmatches) {
+    
+    // Pre checks
     if (strlen(start_path) > MAX_PATH_LENGTH) {
         fprintf(stderr, "EORROR: Start path is too big\n");
         return NULL;
@@ -29,25 +36,27 @@ struct file_matches* find_by_name(const char* filename, const char* start_path,
         return NULL;
     }
 
+    if (fmatches == NULL) {
+        fprintf(stderr, "File matches pointer cannot be null");
+        return NULL;
+    }
+
+    // Variable declarations
     char              name_buffer[MAX_FILENAME_LENGTH];
     char              path_buffer[MAX_PATH_LENGTH];
     DIR*              current_dir;
     struct dirent*    dir_entry;
     struct file_data* fdata;
 
+    // Open directory
     current_dir = opendir(start_path);
     if (current_dir == NULL) {
         fprintf(stderr, "ERROR: Failed to open directory: %s\n", start_path);
         return NULL;
     }
 
-    fmatches = allocate_or_return_file_matches(fmatches);
-    if (fmatches == NULL) {
-        closedir(current_dir);
-        return NULL;
-    }
-
     while (dir_entry = readdir(current_dir)) {
+        // Ignore current and previous directories
         if (strncmp(dir_entry->d_name, ".", MAX_PATH_LENGTH) == 0) {
             continue;
         }
@@ -56,8 +65,8 @@ struct file_matches* find_by_name(const char* filename, const char* start_path,
             continue;
         }
 
+        // Search directories recursively
         if (dir_entry->d_type == DT_DIR) {
-            printf("INFO: Found directory: %s\n", dir_entry->d_name);
             strncpy(path_buffer, start_path, MAX_PATH_LENGTH);
             if (!concat_path(path_buffer, dir_entry->d_name)) {
                 break;
@@ -90,7 +99,14 @@ struct file_matches* find_by_name(const char* filename, const char* start_path,
     return fmatches;
 }
 
+/**
+ @brief Find a file in start_path and its child path by checking its content lines
+ @param data: The data to search for on the file lines
+ @param start_path: The starting path when searching for the file.
+ @param fmatches: structure for holding file matches previously allocated
+ */
 struct file_matches* find_by_content(const char* data, const char* start_path, struct file_matches* fmatches){
+    // Pre checks
     if (strlen(start_path) > MAX_PATH_LENGTH) {
         fprintf(stderr, "EORROR: Start path is too big\n");
         return NULL;
@@ -101,6 +117,12 @@ struct file_matches* find_by_content(const char* data, const char* start_path, s
         return NULL;
     }
 
+    if (fmatches == NULL) {
+        fprintf(stderr, "File matches pointer cannot be null");
+        return NULL;
+    }
+
+    // Variable declarations
     char                name_buffer[MAX_FILENAME_LENGTH];
     char                path_buffer[MAX_PATH_LENGTH];
     char                content_buffer[MAX_CONTENT_SLICE_LENGTH];
@@ -108,19 +130,15 @@ struct file_matches* find_by_content(const char* data, const char* start_path, s
     struct dirent*      dir_entry;
     struct file_data*   fdata;
 
+    // Open the directory
     current_dir = opendir(start_path);
     if (current_dir == NULL) {
         fprintf(stderr, "ERROR: Failed to open directory: %s\n", start_path);
         return NULL;
     }
 
-    fmatches = allocate_or_return_file_matches(fmatches);
-    if (fmatches == NULL) {
-        closedir(current_dir);
-        return NULL;
-    }
-
     while (dir_entry = readdir(current_dir)) {
+        // Skip current and previous directory
         if (strncmp(dir_entry->d_name, ".", MAX_PATH_LENGTH) == 0) {
             continue;
         }
@@ -139,7 +157,6 @@ struct file_matches* find_by_content(const char* data, const char* start_path, s
         }
 
         if (dir_entry->d_type != DT_REG) {
-            printf("INFO: Skipping non-regular file: %s\n", dir_entry->d_name);
             continue;
         }
 
@@ -149,7 +166,7 @@ struct file_matches* find_by_content(const char* data, const char* start_path, s
             break;
         }
 
-        if (!is_in_file_lines(path_buffer, data, content_buffer, MAX_CONTENT_SLICE_LENGTH)) {
+        if (!is_in_file_lines(path_buffer, (char*)data, content_buffer, MAX_CONTENT_SLICE_LENGTH)) {
             continue;
         }
         
@@ -171,7 +188,13 @@ struct file_matches* find_by_content(const char* data, const char* start_path, s
 };
 
 
-// Aux functions
+// <<< Aux functions >>>
+/**
+ @brief Concat to_concat to dest_path.
+ @param dest_path: The source path where to_concat should be appended. Must have space for it.
+ @param to_concat: The sub path to concat.
+ @return Boolean stating if the operation was successful or not.
+ */
 Bool concat_path(char* dest_path, char* to_concat) {
     unsigned int dest_path_len = strlen(dest_path);
     unsigned int to_concat_len = strlen(to_concat);
@@ -190,6 +213,13 @@ Bool concat_path(char* dest_path, char* to_concat) {
     return True;
 }
 
+/**
+ @brief Allocate file data
+ @param file_path: The path of the file matched.
+ @param filename: The name of the file matched.
+ @param file_content_slice: The contents matched on the file if any.
+ @return The pointer to the file data structure allocated.
+ */
 struct file_data* allocate_new_file_data(char* file_path, char* filename, char* file_content_slice) {
     printf("INFO: Allocating file data: %s\n", file_path);
     if (strlen(file_path) > MAX_PATH_LENGTH) {
@@ -220,22 +250,10 @@ struct file_data* allocate_new_file_data(char* file_path, char* filename, char* 
     return fdata;
 }
 
-struct file_matches* allocate_or_return_file_matches(struct file_matches* fmatches) {
-    if (fmatches) {
-        printf("INFO: Found allocated matches\n");
-        return fmatches;
-    }
-
-    fmatches = malloc(sizeof(struct file_matches));
-    if (fmatches == NULL) {
-        fprintf(stderr, "Failed to allocate memory for file matches\n");
-        return NULL;
-    }
-
-    fmatches->size = 0;
-    return fmatches;
-}
-
+/**
+ @brief Free a pointer and set it to null
+ @param ptr: The pointer to be freed.
+ */
 void free_pointer(void* ptr) {
     if (ptr == NULL) {
         fprintf(stderr, "ERROR: Cannot free null pointer\n");
@@ -246,6 +264,14 @@ void free_pointer(void* ptr) {
     ptr = NULL;
 }
 
+/**
+ @brief Check if sub_str is a substring of src. On success store src on buffer.
+ @param src: The source string
+ @param sub_str: The string to check if its a substring of src
+ @param buffer: The buffer where to store src on success.
+ @param buffer_size: The size of buffer.
+ @return A boolean stating if sub_str is sub string of src.
+ */
 Bool is_substring(char* src, char* sub_str, char* buffer, unsigned int buffer_size) {
     char*           str         = src;
     unsigned int    sub_str_len = strlen(sub_str);
@@ -261,6 +287,12 @@ Bool is_substring(char* src, char* sub_str, char* buffer, unsigned int buffer_si
     return False;
 }
 
+/**
+ @brief An adaptation of strchr that isn't case sensitive.
+ @param string: The string where to find the occurrence of the character.
+ @param character: The char to find its first occurrence on the string.
+ @return A pointer to the first occurrence of character in string.
+ */
 char* case_strchr(char* string, char character) {
     char*   substring;
     char*   alternate_substring;
@@ -268,31 +300,45 @@ char* case_strchr(char* string, char character) {
     int     substring_length = 0;
     int     alternate_substring_length = 0;
 
+    // Find the substring case sensitive
     substring = strchr(string, character);
     substring_length = substring ? strlen(substring) : 0;
 
     if (character > 122 || character < 65 || (character > 90 && character < 97)) {
+        // There isn't an alternate substring if the character is not in the alphabet.
         alternate_substring = (char*)0;
     } else {
+        // De phase the character by 32 to get their opposite case. Find the substring
         alternate_char = character < 91 ? character + 32 : character - 32;
         alternate_substring = strchr(string, alternate_char);
     }
 
     alternate_substring_length = alternate_substring ? strlen(alternate_substring) : 0;
 
+    // Return the longest substring to make sure first iteration of the character is found.
     return substring_length > alternate_substring_length ? substring : alternate_substring;
 }
 
+/**
+ @brief Check whether sub_str is in any of the lines of the file at filepath.
+ @param filepath: The path to the file to check;
+ @param sub_str: The substring to find in the file lines.
+ @param buffer: The buffer where to store the line on success.
+ @param buffer_size: The size of the buffer.
+ @return A boolean stating if the operation was successful.
+ */
 Bool is_in_file_lines(char* filepath, char* sub_str, char* buffer, unsigned int buffer_size) {
     FILE*   fs;
     char    line_buffer[MAX_CONTENT_SLICE_LENGTH];
     Bool    match_found = False;
 
+    // Open the file
     fs = fopen(filepath, "r");
     if (fs == NULL) {
         fprintf(stderr, "Failed to open file at: %s\n", filepath);
         return False;
     }
+    // Read the file line by line and store on buffer if a match is found.
     while (fgets(line_buffer, MAX_CONTENT_SLICE_LENGTH, fs)) {
         if (match_found = is_substring(line_buffer, sub_str, buffer, buffer_size)) {
             break;
@@ -303,7 +349,7 @@ Bool is_in_file_lines(char* filepath, char* sub_str, char* buffer, unsigned int 
     return match_found;
 } 
 
-// Retrieve constants
+// <<< Retrieve constants >>>
 unsigned int max_path_length() {
     return MAX_PATH_LENGTH;
 }
