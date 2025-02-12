@@ -27,17 +27,17 @@ struct file_matches* find_by_name(const char* filename, const char* start_path,
     
     // Pre checks
     if (strlen(start_path) > MAX_PATH_LENGTH) {
-        fprintf(stderr, "EORROR: Start path is too big\n");
-        return NULL;
+        printf("EORROR: Start path is too big\n");
+        return fmatches;
     }
 
     if (strlen(filename) > MAX_FILENAME_LENGTH) {
-        fprintf(stderr, "ERROR: Filename is too big\n");
-        return NULL;
+        printf("ERROR: Filename is too big\n");
+        return fmatches;
     }
 
     if (fmatches == NULL) {
-        fprintf(stderr, "File matches pointer cannot be null");
+        printf("File matches pointer cannot be null");
         return NULL;
     }
 
@@ -51,8 +51,8 @@ struct file_matches* find_by_name(const char* filename, const char* start_path,
     // Open directory
     current_dir = opendir(start_path);
     if (current_dir == NULL) {
-        fprintf(stderr, "ERROR: Failed to open directory: %s\n", start_path);
-        return NULL;
+        printf("ERROR: Failed to open directory: %s\n", start_path);
+        return fmatches;
     }
 
     while (dir_entry = readdir(current_dir)) {
@@ -86,7 +86,7 @@ struct file_matches* find_by_name(const char* filename, const char* start_path,
         }
 
         if (fmatches->size >= MAX_MATCHES) {
-            fprintf(stderr, "WARNING: Maximum matches reached\n");
+            printf("WARNING: Maximum matches reached\n");
             break;
         }
 
@@ -108,17 +108,17 @@ struct file_matches* find_by_name(const char* filename, const char* start_path,
 struct file_matches* find_by_content(const char* data, const char* start_path, struct file_matches* fmatches){
     // Pre checks
     if (strlen(start_path) > MAX_PATH_LENGTH) {
-        fprintf(stderr, "EORROR: Start path is too big\n");
-        return NULL;
+        printf("EORROR: Start path is too big\n");
+        return fmatches;
     }
 
     if (strlen(data) > MAX_CONTENT_SLICE_LENGTH) {
-        fprintf(stderr, "ERROR: Content slice is too big\n");
-        return NULL;
+        printf("ERROR: Content slice is too big\n");
+        return fmatches;
     }
 
     if (fmatches == NULL) {
-        fprintf(stderr, "File matches pointer cannot be null");
+        printf("File matches pointer cannot be null");
         return NULL;
     }
 
@@ -133,8 +133,8 @@ struct file_matches* find_by_content(const char* data, const char* start_path, s
     // Open the directory
     current_dir = opendir(start_path);
     if (current_dir == NULL) {
-        fprintf(stderr, "ERROR: Failed to open directory: %s\n", start_path);
-        return NULL;
+        printf("ERROR: Failed to open directory: %s\n", start_path);
+        return fmatches;
     }
 
     while (dir_entry = readdir(current_dir)) {
@@ -174,7 +174,7 @@ struct file_matches* find_by_content(const char* data, const char* start_path, s
         strncpy(name_buffer, dir_entry->d_name, MAX_FILENAME_LENGTH);
 
         if (fmatches->size >= MAX_MATCHES) {
-            fprintf(stderr, "WARNING: Maximum matches reached\n");
+            printf("WARNING: Maximum matches reached\n");
             break;
         }
 
@@ -200,7 +200,7 @@ Bool concat_path(char* dest_path, char* to_concat) {
     unsigned int to_concat_len = strlen(to_concat);
 
     if (dest_path_len + to_concat_len + 2 > MAX_PATH_LENGTH) {
-        fprintf(stderr, "ERROR: Cannot concat %d length sub path to %d path. Max length exceeded\n",
+        printf("ERROR: Cannot concat %d length sub path to %d path. Max length exceeded\n",
                 to_concat_len, dest_path_len);
         return False;
     }
@@ -223,23 +223,23 @@ Bool concat_path(char* dest_path, char* to_concat) {
 struct file_data* allocate_new_file_data(char* file_path, char* filename, char* file_content_slice) {
     printf("INFO: Allocating file data: %s\n", file_path);
     if (strlen(file_path) > MAX_PATH_LENGTH) {
-        fprintf(stderr, "ERROR: Filepath is too long\n");
+        printf("ERROR: Filepath is too long\n");
         return NULL;
     }
 
     if (strlen(filename) > MAX_FILENAME_LENGTH) {
-        fprintf(stderr, "ERROR: Filename is too long\n");
+        printf("ERROR: Filename is too long\n");
         return NULL;
     }
 
     if (strlen(file_content_slice) > MAX_CONTENT_SLICE_LENGTH) {
-        fprintf(stderr, "ERROR: File content slice is too long\n");
+        printf("ERROR: File content slice is too long\n");
         return NULL;
     }
 
     struct file_data* fdata = malloc(sizeof(struct file_data));
     if (fdata == NULL) {
-        fprintf(stderr, "ERROR: Failed to allocate memory for file data\n");
+        printf("ERROR: Failed to allocate memory for file data\n");
         return NULL;
     }
 
@@ -256,10 +256,11 @@ struct file_data* allocate_new_file_data(char* file_path, char* filename, char* 
  */
 void free_pointer(void* ptr) {
     if (ptr == NULL) {
-        fprintf(stderr, "ERROR: Cannot free null pointer\n");
+        printf("ERROR: Cannot free null pointer\n");
         return;
     }
 
+    printf("Freeing memory for pointer at: %p\n", ptr);
     free(ptr);
     ptr = NULL;
 }
@@ -335,7 +336,7 @@ Bool is_in_file_lines(char* filepath, char* sub_str, char* buffer, unsigned int 
     // Open the file
     fs = fopen(filepath, "r");
     if (fs == NULL) {
-        fprintf(stderr, "Failed to open file at: %s\n", filepath);
+        printf("Failed to open file at: %s\n", filepath);
         return False;
     }
     // Read the file line by line and store on buffer if a match is found.
