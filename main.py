@@ -25,8 +25,8 @@ def find_combined(name: str, content: str, path: str):
         return {}
     
     # Base level search, without recursive checking
-    results_by_name = find_by_name(name, path, False) if name else {}
-    results_by_content = find_by_content(content, path, False) if content else {}
+    results_by_name = find_by_name(name, path, False) if name else []
+    results_by_content = find_by_content(content, path, False) if content else []
 
     # initialize futures lists
     futures = {"by_name": [], "by_content": []}
@@ -40,8 +40,10 @@ def find_combined(name: str, content: str, path: str):
             if not os.path.isdir(sub_path):
                 continue
 
-            futures["by_name"].append(executor.submit(find_by_name, name, sub_path, True))
-            futures["by_content"].append(executor.submit(find_by_content, content, sub_path, True))
+            if name:
+                futures["by_name"].append(executor.submit(find_by_name, name, sub_path, True))
+            if content:
+                futures["by_content"].append(executor.submit(find_by_content, content, sub_path, True))
     
     # Extend each list by future results
     for future in futures["by_name"]:
