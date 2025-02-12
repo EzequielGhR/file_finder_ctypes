@@ -43,9 +43,9 @@ class FileData(ctypes.Structure):
         return str(self.to_dict())
     
     def to_dict(self):
-        return {"file_path": self.file_path.decode().strip(),
-                "file_name": self.file_name.decode().strip(),
-                "file_content_slice": self.file_content_slice.decode().strip()}
+        return {"file_path": self.file_path.decode(errors="replace").strip(),
+                "file_name": self.file_name.decode(errors="replace").strip(),
+                "file_content_slice": self.file_content_slice.decode(errors="replace").strip()}
     
 class FileMatches(ctypes.Structure):
     """
@@ -82,18 +82,18 @@ class FileMatches(ctypes.Structure):
         return output
 
     def to_dict(self):
-        return {"files": [self.files[i].contents.__repr__() for i in range(self.size)], "size": self.size}
+        return {"files": [self.files[i].contents.to_dict() for i in range(self.size)], "size": self.size}
     
 # ------------------------------------------------
 # <<< Main find functions typings and wrappers >>>
 # ------------------------------------------------
-LIB.find_by_name.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.POINTER(FileMatches)]
+LIB.find_by_name.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.POINTER(FileMatches), ctypes.c_bool]
 LIB.find_by_name.restype = ctypes.POINTER(FileMatches)
-LIB.find_by_content.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.POINTER(FileMatches)]
+LIB.find_by_content.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.POINTER(FileMatches), ctypes.c_bool]
 LIB.find_by_content.restype = ctypes.POINTER(FileMatches)
 
 # Main functions to be used
-def find_by_name(filename: str, start_path: str) -> List[Dict]:
+def find_by_name(filename: str, start_path: str, recursive: bool = True) -> List[Dict]:
     """
     Wrapper for find_by_name C function.
     :param filename: The name or partial name of the file to search.
@@ -101,7 +101,7 @@ def find_by_name(filename: str, start_path: str) -> List[Dict]:
     :return: A list of matches found
     """
     file_matches = FileMatches()
-    LIB.find_by_name(filename.encode(), start_path.encode(), ctypes.pointer(file_matches))
+    LIB.find_by_name(filename.encode(), start_path.encode(), ctypes.pointer(file_matches), recursive)
 
     output = []
     file_data_ptr = file_matches.pop()
@@ -112,7 +112,7 @@ def find_by_name(filename: str, start_path: str) -> List[Dict]:
     
     return output
 
-def find_by_content(data: str, start_path: str) -> List[Dict]:
+def find_by_content(data: str, start_path: str, recursive: bool = True) -> List[Dict]:
     """
     Wrapper for find_by_content C function.
     :param data: The data to search on different file contents.
@@ -120,7 +120,7 @@ def find_by_content(data: str, start_path: str) -> List[Dict]:
     :return: A list of matches found
     """
     file_matches = FileMatches()
-    LIB.find_by_content(data.encode(), start_path.encode(), ctypes.pointer(file_matches))
+    LIB.find_by_content(data.encode(), start_path.encode(), ctypes.pointer(file_matches), recursive)
 
     output = []
     file_data_ptr = file_matches.pop()

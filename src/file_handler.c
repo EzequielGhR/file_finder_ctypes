@@ -23,11 +23,12 @@ void                    free_pointer(void* ptr);
  @param fmatches: structure for holding file matches previously allocated
  */
 struct file_matches* find_by_name(const char* filename, const char* start_path,
-                                  struct file_matches* fmatches) {
+                                  struct file_matches* fmatches, Bool recursive) {
+    printf("INFO: Searching by name with params: %s, %s\n", filename, start_path);
     
     // Pre checks
     if (strlen(start_path) > MAX_PATH_LENGTH) {
-        printf("EORROR: Start path is too big\n");
+        printf("ERROR: Start path is too big\n");
         return fmatches;
     }
 
@@ -37,8 +38,13 @@ struct file_matches* find_by_name(const char* filename, const char* start_path,
     }
 
     if (fmatches == NULL) {
-        printf("File matches pointer cannot be null");
+        printf("ERROR: File matches pointer cannot be null");
         return NULL;
+    }
+
+    if (fmatches->size >= MAX_MATCHES) {
+        printf("WARNING: Maximum matches reached\n");
+        return fmatches;
     }
 
     // Variable declarations
@@ -66,19 +72,17 @@ struct file_matches* find_by_name(const char* filename, const char* start_path,
         }
 
         // Search directories recursively
-        if (dir_entry->d_type == DT_DIR) {
+        if (dir_entry->d_type == DT_DIR && recursive) {
             strncpy(path_buffer, start_path, MAX_PATH_LENGTH);
             if (!concat_path(path_buffer, dir_entry->d_name)) {
                 break;
             }
-            find_by_name(filename, (const char*)path_buffer, fmatches);
+            find_by_name(filename, (const char*)path_buffer, fmatches, recursive);
         }
 
         if (!is_substring(dir_entry->d_name, (char*)filename, name_buffer, MAX_FILENAME_LENGTH)) {
             continue;
         }
-        
-        printf("INFO: Found substring '%s' in '%s'\n", filename, dir_entry->d_name);
 
         strncpy(path_buffer, start_path, MAX_PATH_LENGTH);
         if (!concat_path(path_buffer, dir_entry->d_name)) {
@@ -105,10 +109,12 @@ struct file_matches* find_by_name(const char* filename, const char* start_path,
  @param start_path: The starting path when searching for the file.
  @param fmatches: structure for holding file matches previously allocated
  */
-struct file_matches* find_by_content(const char* data, const char* start_path, struct file_matches* fmatches){
+struct file_matches* find_by_content(const char* data, const char* start_path,
+                                     struct file_matches* fmatches, Bool recursive){
+    printf("INFO: Searching by name with params: %s, %s\n", data, start_path);
     // Pre checks
     if (strlen(start_path) > MAX_PATH_LENGTH) {
-        printf("EORROR: Start path is too big\n");
+        printf("ERROR: Start path is too big\n");
         return fmatches;
     }
 
@@ -118,8 +124,13 @@ struct file_matches* find_by_content(const char* data, const char* start_path, s
     }
 
     if (fmatches == NULL) {
-        printf("File matches pointer cannot be null");
+        printf("ERROR: File matches pointer cannot be null");
         return NULL;
+    }
+
+    if (fmatches->size >= MAX_MATCHES) {
+        printf("WARNING: Maximum matches reached\n");
+        return fmatches;
     }
 
     // Variable declarations
@@ -147,20 +158,18 @@ struct file_matches* find_by_content(const char* data, const char* start_path, s
             continue;
         }
 
-        if (dir_entry->d_type == DT_DIR) {
-            printf("INFO: Found directory: %s\n", dir_entry->d_name);
+        if (dir_entry->d_type == DT_DIR && recursive) {
             strncpy(path_buffer, start_path, MAX_PATH_LENGTH);
             if (!concat_path(path_buffer, dir_entry->d_name)) {
                 break;
             }
-            find_by_content(data, (const char*)path_buffer, fmatches);
+            find_by_content(data, (const char*)path_buffer, fmatches, recursive);
         }
 
         if (dir_entry->d_type != DT_REG) {
             continue;
         }
 
-        printf("INFO: Found regular file: %s\n", dir_entry->d_name);
         strncpy(path_buffer, start_path, MAX_PATH_LENGTH);
         if (!concat_path(path_buffer, dir_entry->d_name)) {
             break;
@@ -170,7 +179,6 @@ struct file_matches* find_by_content(const char* data, const char* start_path, s
             continue;
         }
         
-        printf("INFO: Found substring '%s' in file '%s' contents\n", data, dir_entry->d_name);
         strncpy(name_buffer, dir_entry->d_name, MAX_FILENAME_LENGTH);
 
         if (fmatches->size >= MAX_MATCHES) {
@@ -221,7 +229,6 @@ Bool concat_path(char* dest_path, char* to_concat) {
  @return The pointer to the file data structure allocated.
  */
 struct file_data* allocate_new_file_data(char* file_path, char* filename, char* file_content_slice) {
-    printf("INFO: Allocating file data: %s\n", file_path);
     if (strlen(file_path) > MAX_PATH_LENGTH) {
         printf("ERROR: Filepath is too long\n");
         return NULL;
@@ -260,7 +267,6 @@ void free_pointer(void* ptr) {
         return;
     }
 
-    printf("Freeing memory for pointer at: %p\n", ptr);
     free(ptr);
     ptr = NULL;
 }
@@ -336,7 +342,7 @@ Bool is_in_file_lines(char* filepath, char* sub_str, char* buffer, unsigned int 
     // Open the file
     fs = fopen(filepath, "r");
     if (fs == NULL) {
-        printf("Failed to open file at: %s\n", filepath);
+        printf("ERROR: Failed to open file at: %s\n", filepath);
         return False;
     }
     // Read the file line by line and store on buffer if a match is found.
